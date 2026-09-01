@@ -1,68 +1,120 @@
 using UnityEngine;
-using TMPro;
 using UnityEngine.UI;
-using System.Collections.Generic;
+using TMPro;
+using Ink.Runtime;
 
 public class DialogueManager : MonoBehaviour
 {
-    [Header("UI")]
+    [Header("Dialogue UI")]
     [SerializeField] private GameObject dialoguePanel;
     [SerializeField] private TMP_Text npcNameText;
     [SerializeField] private TMP_Text dialogueText;
 
+    [Header("Choice Buttons")]
     [SerializeField] private Button[] choiceButtons;
 
-    [Header("Systems")]
-    [SerializeField] private MoodSystem moodSystem;
+    private Story currentStory;
+    private NPCController currentNPC;
 
-    private NPCData currentNPC;
-
-    public void StartDialogue(NPCData npc)
+    private void Start()
     {
+        dialoguePanel.SetActive(false);
+
+        HideChoices();
+    }
+
+    // Called by BartenderInteraction
+    public void StartDialogue(NPCController npc)
+    {
+        if (npc == null)
+            return;
+
         currentNPC = npc;
+
+        NPCData data = currentNPC.NPCData;
+
+        if (data == null)
+        {
+            Debug.LogError("NPC has no NPCData assigned.");
+            return;
+        }
+
+        if (data.inkDialogue == null)
+        {
+            Debug.LogError("NPC has no Ink dialogue assigned.");
+            return;
+        }
+
+        currentStory = new Story(data.inkDialogue.text);
+
+        npcNameText.text = data.npcName;
 
         dialoguePanel.SetActive(true);
 
-        npcNameText.text = npc.npcName;
-        dialogueText.text = npc.openingDialogue;
-
-        moodSystem.SetMood(npc.startingMood);
+        ContinueStory();
     }
 
-    public void DisplayChoices(List<DialogueChoice> choices)
+    private void ContinueStory()
     {
-        for (int i = 0; i < choiceButtons.Length; i++)
+        if (currentStory == null)
+            return;
+
+        // NPC still has dialogue
+        if (currentStory.canContinue)
         {
-            if (i < choices.Count)
-            {
-                choiceButtons[i].gameObject.SetActive(true);
+            string dialogue = currentStory.Continue();
 
-                DialogueChoice choice = choices[i];
+            dialogueText.text = dialogue.Trim();
 
-                choiceButtons[i]
-                    .GetComponentInChildren<TMP_Text>()
-                    .text = choice.choiceText;
+            DisplayChoices();
 
-                choiceButtons[i].onClick.RemoveAllListeners();
+            return;
+        }
 
-                choiceButtons[i].onClick.AddListener(
-                    () => SelectChoice(choice)
-                );
-            }
-            else
-            {
-                choiceButtons[i].gameObject.SetActive(false);
-            }
+        // Story has finished
+        if (currentStory.currentChoices.Count == 0)
+        {
+            EndDialogue();
         }
     }
 
-    private void SelectChoice(DialogueChoice choice)
+    private void DisplayChoices()
     {
-        dialogueText.text = choice.npcResponse;
+        HideChoices();
 
-        moodSystem.ChangeMood(choice.moodEffect);
+        var choices = currentStory.currentChoices;
+
+        for (int i = 0; i < choices.Count; i++)
+        {
+            if (i >= choiceButtons.Length)
+                break;
+
+            Button button = choiceButtons[i];
+
+            button.gameObject.SetActive(true);
+
+            TMP_Text buttonText =
+                button.GetComponentInChildren<TMP_Text>();
+
+            buttonText.text = choices[i].text.Trim();
+
+            int choiceIndex = i;
+
+            button.onClick.RemoveAllListeners();
+
+            button.onClick.AddListener(
+                () => SelectChoice(choiceIndex)
+            );
+        }
+    }
+
+    private void SelectChoice(int choiceIndex)
+    {
+        currentStory.ChooseChoiceIndex(choiceIndex);
 
         HideChoices();
+
+        ContinueStory();
     }
 
     private void HideChoices()
@@ -70,12 +122,19 @@ public class DialogueManager : MonoBehaviour
         foreach (Button button in choiceButtons)
         {
             button.gameObject.SetActive(false);
+
+            button.onClick.RemoveAllListeners();
         }
     }
 
     public void EndDialogue()
     {
         dialoguePanel.SetActive(false);
+
+        HideChoices();
+
+        currentStory = null;
+
         currentNPC = null;
     }
 }
