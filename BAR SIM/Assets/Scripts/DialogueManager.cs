@@ -13,43 +13,88 @@ public class DialogueManager : MonoBehaviour
     [Header("Choice Buttons")]
     [SerializeField] private Button[] choiceButtons;
 
+    [Header("Systems")]
+    [SerializeField] private DrinksSystem drinksSystem;
+    [SerializeField] private MoodSystem moodSystem;
+    [SerializeField] private FeedbackManager feedbackManager;
+
     private Story currentStory;
     private NPCController currentNPC;
 
     private void Start()
     {
-        dialoguePanel.SetActive(false);
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(false);
+        }
 
         HideChoices();
     }
 
-    // Called by BartenderInteraction
     public void StartDialogue(NPCController npc)
     {
         if (npc == null)
             return;
 
+        NPCData npcData = npc.NPCData;
+
+        if (npcData == null)
+        {
+            Debug.LogError(
+                "NPCData is missing on " +
+                npc.gameObject.name
+            );
+
+            return;
+        }
+
+        if (npcData.inkDialogue == null)
+        {
+            Debug.LogError(
+                npcData.npcName +
+                " has no Ink dialogue file assigned."
+            );
+
+            return;
+        }
+
         currentNPC = npc;
 
-        NPCData data = currentNPC.NPCData;
+        // Create the Ink story belonging
+        // to the current NPC.
+        currentStory =
+            new Story(npcData.inkDialogue.text);
 
-        if (data == null)
+        if (npcNameText != null)
         {
-            Debug.LogError("NPC has no NPCData assigned.");
-            return;
+            npcNameText.text =
+                npcData.npcName;
         }
 
-        if (data.inkDialogue == null)
+        // Starting values are passed
+        // from Unity into Ink.
+        currentStory.variablesState["mood"] =
+            npcData.startingMood;
+
+        currentStory.variablesState["listeningScore"] =
+            0;
+
+        currentStory.variablesState["drink_choice"] =
+            "";
+
+        // MoodSystem displays the
+        // NPC's starting emotional state.
+        if (moodSystem != null)
         {
-            Debug.LogError("NPC has no Ink dialogue assigned.");
-            return;
+            moodSystem.SetMood(
+                npcData.startingMood
+            );
         }
 
-        currentStory = new Story(data.inkDialogue.text);
-
-        npcNameText.text = data.npcName;
-
-        dialoguePanel.SetActive(true);
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(true);
+        }
 
         ContinueStory();
     }
@@ -59,22 +104,82 @@ public class DialogueManager : MonoBehaviour
         if (currentStory == null)
             return;
 
-        // NPC still has dialogue
+        // If Ink has another line,
+        // display it.
         if (currentStory.canContinue)
         {
-            string dialogue = currentStory.Continue();
+            string line =
+                currentStory.Continue().Trim();
 
-            dialogueText.text = dialogue.Trim();
+            if (dialogueText != null)
+            {
+                dialogueText.text = line;
+            }
 
-            DisplayChoices();
+            // Read any mood change
+            // made inside Ink.
+            UpdateMood();
 
-            return;
+            // Check tags attached
+            // to the current Ink line.
+            foreach (
+                string tag
+                in currentStory.currentTags)
+            {
+                if (
+                    tag.Trim().Equals(
+                        "DRINK_CHOICE",
+                        System.StringComparison
+                            .OrdinalIgnoreCase
+                    )
+                )
+                {
+                    HideChoices();
+
+                    if (drinksSystem != null)
+                    {
+                        drinksSystem
+                            .ShowDrinkChoices();
+                    }
+
+                    return;
+                }
+            }
+
+            // If Ink has produced dialogue
+            // choices, display them.
+            if (
+                currentStory
+                    .currentChoices.Count > 0)
+            {
+                DisplayChoices();
+                return;
+            }
+
+            /*
+             * If there are no choices but Ink
+             * still contains more story content,
+             * continue to the next line.
+             *
+             * This is useful for consecutive
+             * NPC dialogue lines.
+             */
+            if (currentStory.canContinue)
+            {
+                ContinueStory();
+                return;
+            }
         }
 
-        // Story has finished
-        if (currentStory.currentChoices.Count == 0)
+        // If there is nothing else
+        // to continue and no choices remain,
+        // the interaction is complete.
+        if (
+            currentStory != null &&
+            !currentStory.canContinue &&
+            currentStory.currentChoices.Count == 0)
         {
-            EndDialogue();
+            FinishConversation();
         }
     }
 
@@ -82,59 +187,182 @@ public class DialogueManager : MonoBehaviour
     {
         HideChoices();
 
-        var choices = currentStory.currentChoices;
+        if (currentStory == null)
+            return;
 
-        for (int i = 0; i < choices.Count; i++)
+        var choices =
+            currentStory.currentChoices;
+
+        for (
+            int i = 0;
+            i < choices.Count;
+            i++)
         {
             if (i >= choiceButtons.Length)
-                break;
+            {
+                Debug.LogWarning(
+                    "Ink contains more choices " +
+                    "than the Dialogue UI has buttons."
+                );
 
-            Button button = choiceButtons[i];
+                break;
+            }
+
+            Button button =
+                choiceButtons[i];
+
+            if (button == null)
+                continue;
 
             button.gameObject.SetActive(true);
 
             TMP_Text buttonText =
                 button.GetComponentInChildren<TMP_Text>();
 
-            buttonText.text = choices[i].text.Trim();
+            if (buttonText != null)
+            {
+                buttonText.text =
+                    choices[i].text.Trim();
+            }
 
             int choiceIndex = i;
 
             button.onClick.RemoveAllListeners();
 
             button.onClick.AddListener(
-                () => SelectChoice(choiceIndex)
+                () =>
+                    SelectChoice(
+                        choiceIndex
+                    )
             );
         }
     }
 
-    private void SelectChoice(int choiceIndex)
+    private void SelectChoice(
+        int choiceIndex)
     {
-        currentStory.ChooseChoiceIndex(choiceIndex);
+        if (currentStory == null)
+            return;
+
+        currentStory.ChooseChoiceIndex(
+            choiceIndex
+        );
 
         HideChoices();
 
         ContinueStory();
     }
 
+    public void SubmitDrinkChoice(
+        string choiceID)
+    {
+        if (currentStory == null)
+            return;
+
+        /*
+         * DrinksSystem does not alter mood.
+         *
+         * It only tells Ink which service
+         * choice the player selected.
+         */
+        currentStory.variablesState[
+            "drink_choice"
+        ] = choiceID;
+
+        ContinueStory();
+    }
+
+    private void UpdateMood()
+    {
+        if (
+            currentStory == null ||
+            moodSystem == null)
+        {
+            return;
+        }
+
+        object moodValue =
+            currentStory.variablesState[
+                "mood"
+            ];
+
+        if (moodValue == null)
+            return;
+
+        int mood =
+            (int)moodValue;
+
+        // MoodSystem displays the value.
+        // It does not calculate the result.
+        moodSystem.SetMood(mood);
+    }
+
     private void HideChoices()
     {
-        foreach (Button button in choiceButtons)
+        if (choiceButtons == null)
+            return;
+
+        foreach (
+            Button button
+            in choiceButtons)
         {
+            if (button == null)
+                continue;
+
             button.gameObject.SetActive(false);
 
             button.onClick.RemoveAllListeners();
         }
     }
 
-    public void EndDialogue()
+    private void FinishConversation()
     {
-        dialoguePanel.SetActive(false);
+        if (currentStory == null)
+            return;
+
+        int finalMood =
+            (int)currentStory
+                .variablesState["mood"];
+
+        int listeningScore =
+            (int)currentStory
+                .variablesState[
+                    "listeningScore"
+                ];
+
+        // Close conversation UI.
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(false);
+        }
 
         HideChoices();
 
-        currentStory = null;
+        if (drinksSystem != null)
+        {
+            drinksSystem.HideDrinkChoices();
+        }
 
+        /*
+         * Send the complete interaction
+         * results to FeedbackManager.
+         *
+         * FeedbackManager keeps its own
+         * reference to the NPC so it can
+         * make the NPC leave afterwards.
+         */
+        if (feedbackManager != null)
+        {
+            feedbackManager.ShowFeedback(
+                currentNPC,
+                finalMood,
+                listeningScore
+            );
+        }
+
+        // DialogueManager no longer needs
+        // to hold the completed conversation.
+        currentStory = null;
         currentNPC = null;
     }
 }

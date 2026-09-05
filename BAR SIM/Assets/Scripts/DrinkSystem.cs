@@ -1,39 +1,96 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class DrinksSystem : MonoBehaviour
 {
+    [Header("UI")]
+    [SerializeField] private GameObject drinksPanel;
+    [SerializeField] private Button[] drinkButtons;
+
     [Header("References")]
-    [SerializeField] private MoodSystem moodSystem;
-    [SerializeField] private TMP_Text dialogueText;
+    [SerializeField] private DialogueManager dialogueManager;
 
-    public void OfferWater()
+    private DrinkChoice[] drinkChoices;
+
+    private void Awake()
     {
-        moodSystem.ChangeMood(1);
+        CreateDrinkChoices();
 
-        dialogueText.text =
-            "Thanks. Water actually sounds good right now.";
+        if (drinksPanel != null)
+            drinksPanel.SetActive(false);
     }
 
-    public void OfferSoftDrink()
+    private void CreateDrinkChoices()
     {
-        dialogueText.text =
-            "I'll have something light, thanks.";
+        drinkChoices = new DrinkChoice[]
+        {
+            new DrinkChoice
+            {
+                actionName = "Offer Water",
+                choiceID = "water"
+            },
+
+            new DrinkChoice
+            {
+                actionName = "Offer Soft Drink",
+                choiceID = "soft_drink"
+            },
+
+            new DrinkChoice
+            {
+                actionName = "Offer Alcohol",
+                choiceID = "alcohol"
+            },
+
+            new DrinkChoice
+            {
+                actionName = "Continue Listening",
+                choiceID = "listen"
+            }
+        };
     }
 
-    public void OfferAlcoholicDrink()
+    public void ShowDrinkChoices()
     {
-        moodSystem.ChangeMood(-1);
+        drinksPanel.SetActive(true);
 
-        dialogueText.text =
-            "I'm not sure that's what I need right now.";
+        for (int i = 0; i < drinkButtons.Length; i++)
+        {
+            if (i >= drinkChoices.Length)
+            {
+                drinkButtons[i].gameObject.SetActive(false);
+                continue;
+            }
+
+            DrinkChoice choice = drinkChoices[i];
+
+            drinkButtons[i].gameObject.SetActive(true);
+
+            TMP_Text buttonText =
+                drinkButtons[i].GetComponentInChildren<TMP_Text>();
+
+            buttonText.text = choice.actionName;
+
+            drinkButtons[i].onClick.RemoveAllListeners();
+
+            string id = choice.choiceID;
+
+            drinkButtons[i].onClick.AddListener(
+                () => SelectDrink(id)
+            );
+        }
     }
 
-    public void ContinueListening()
+    private void SelectDrink(string choiceID)
     {
-        moodSystem.ChangeMood(1);
+        drinksPanel.SetActive(false);
 
-        dialogueText.text =
-            "Thanks for listening. I needed that.";
+        dialogueManager.SubmitDrinkChoice(choiceID);
+    }
+
+    public void HideDrinkChoices()
+    {
+        drinksPanel.SetActive(false);
     }
 }
