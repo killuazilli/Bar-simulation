@@ -131,6 +131,8 @@ public class NPCController : MonoBehaviour
 
     private void ArriveAtBar()
     {
+        Debug.Log("NPC ARRIVED AT BAR: " + NPCName);
+
         isWalkingToBar = false;
         hasArrivedAtBar = true;
 
@@ -138,12 +140,15 @@ public class NPCController : MonoBehaviour
         agent.ResetPath();
 
         SetWalking(false);
-
         FaceBartender();
 
         if (bartenderInteraction != null)
         {
             bartenderInteraction.NPCArrived(this);
+        }
+        else
+        {
+            Debug.LogError("BartenderInteraction is NOT assigned.");
         }
     }
 

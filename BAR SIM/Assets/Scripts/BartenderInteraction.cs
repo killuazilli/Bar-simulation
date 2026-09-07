@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.InputSystem;
 
 public class BartenderInteraction : MonoBehaviour
 {
@@ -41,15 +42,17 @@ public class BartenderInteraction : MonoBehaviour
         if (interactionStarted)
             return;
 
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Keyboard.current != null &&
+            Keyboard.current.eKey.wasPressedThisFrame)
         {
             StartNPCInteraction();
         }
     }
 
-    public void NPCArrived(
-        NPCController npc)
+    public void NPCArrived(NPCController npc)
     {
+        Debug.Log("BartenderInteraction received NPC: " + npc.NPCName);
+
         if (npc == null)
             return;
 
@@ -61,19 +64,19 @@ public class BartenderInteraction : MonoBehaviour
         if (interactionPrompt != null)
         {
             interactionPrompt.SetActive(true);
+
+            Debug.Log("Interaction Prompt ENABLED");
+        }
+        else
+        {
+            Debug.LogError("Interaction Prompt is NOT assigned!");
         }
 
         if (interactionText != null)
         {
             interactionText.text =
-                "Press E to talk to " +
-                npc.NPCName;
+                "Press E to talk to " + npc.NPCName;
         }
-
-        Debug.Log(
-            npc.NPCName +
-            " has arrived at the bar."
-        );
     }
 
     private void StartNPCInteraction()
@@ -89,13 +92,13 @@ public class BartenderInteraction : MonoBehaviour
             interactionPrompt.SetActive(false);
         }
 
-        // Switch to Camera 2.
+        // Switch to interaction camera.
         if (cameraManager != null)
         {
             cameraManager.ShowInteractionCamera();
         }
 
-        // Start Ink conversation.
+        // Start Ink dialogue.
         if (dialogueManager != null)
         {
             dialogueManager.StartDialogue(

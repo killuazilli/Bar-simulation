@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SadCustomer
   m_EditorClassIdentifier: Assembly-CSharp::NPCData
   npcName: Brad
-  inkDialogue: {fileID: 0}
+  inkDialogue: {fileID: 4900000, guid: e0d284b28187a3642b184affbfc4a03b, type: 3}
   startingMood: 0
   neutralIcon: {fileID: 0}
   positiveIcon: {fileID: 1876502322, guid: 4830153afd476b646939b276dd006ce6, type: 3}
