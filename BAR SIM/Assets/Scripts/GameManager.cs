@@ -4,72 +4,99 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     [Header("Customers")]
-    [SerializeField]
-    private NPCController[] customers;
+    [SerializeField] private NPCController[] customers;
 
     [Header("Systems")]
-    [SerializeField]
-    private CameraManager cameraManager;
+    [SerializeField] private CameraManager cameraManager;
+    [SerializeField] private FeedbackManager feedbackManager;
+    [SerializeField] private MoodSystem moodSystem;
+    [SerializeField] private ResearchDataManager researchDataManager;
 
-    [SerializeField]
-    private FeedbackManager feedbackManager;
-
-    [Header("Game Over")]
-    [SerializeField]
-    private GameObject gameOverPanel;
-
-    [SerializeField]
-    private string mainMenuSceneName =
-        "MainMenu";
+    [Header("Flow UI")]
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject participantIDPanel;
+    [SerializeField] private GameObject preQuestionnairePanel;
+    [SerializeField] private GameObject trainingIntroPanel;
+    [SerializeField] private GameObject postQuestionnairePanel;
 
     private int currentCustomerIndex = -1;
+
+    public int CurrentCustomerIndex =>
+        currentCustomerIndex;
 
     private void Awake()
     {
         if (customers != null)
         {
-            foreach (
-                NPCController customer
-                in customers)
+            foreach (NPCController customer in customers)
             {
                 if (customer != null)
-                {
-                    customer.gameObject
-                        .SetActive(false);
-                }
+                    customer.gameObject.SetActive(false);
             }
         }
 
-        if (gameOverPanel != null)
-        {
-            gameOverPanel.SetActive(false);
-        }
+        SetPanel(mainMenuPanel, true);
+        SetPanel(participantIDPanel, false);
+        SetPanel(preQuestionnairePanel, false);
+        SetPanel(trainingIntroPanel, false);
+        SetPanel(postQuestionnairePanel, false);
     }
 
     private void Start()
     {
-        StartGame();
-    }
-
-    private void StartGame()
-    {
         currentCustomerIndex = -1;
 
         if (feedbackManager != null)
-        {
-            feedbackManager
-                .ResetFeedbackData();
-        }
+            feedbackManager.ResetFeedbackData();
+
+        if (moodSystem != null)
+            moodSystem.HideMood();
+
+        if (cameraManager != null)
+            cameraManager.StopFollowing();
+    }
+
+    // Open participant ID entry
+    public void PlayPressed()
+    {
+        SetPanel(mainMenuPanel, false);
+        SetPanel(participantIDPanel, true);
+    }
+
+    // Continue after participant ID
+    public void ParticipantIDAccepted()
+    {
+        SetPanel(participantIDPanel, false);
+        SetPanel(preQuestionnairePanel, true);
+    }
+
+    // Continue after pre-questionnaire
+    public void PreQuestionnaireCompleted()
+    {
+        SetPanel(preQuestionnairePanel, false);
+        SetPanel(trainingIntroPanel, true);
+    }
+
+    // Start Brad's interaction
+    public void BeginBradInteraction()
+    {
+        SetPanel(trainingIntroPanel, false);
+
+        currentCustomerIndex = -1;
+
+        if (feedbackManager != null)
+            feedbackManager.ResetFeedbackData();
 
         StartNextCustomer();
     }
 
+    // Start the next customer
     private void StartNextCustomer()
     {
         currentCustomerIndex++;
 
-        if (currentCustomerIndex >=
-            customers.Length)
+        if (customers == null ||
+            currentCustomerIndex >= customers.Length)
         {
             ShowFinalFeedback();
             return;
@@ -91,7 +118,14 @@ public class GameManager : MonoBehaviour
 
         customer.gameObject.SetActive(true);
 
-        // Camera 1 follows the NPC.
+        if (moodSystem != null &&
+            customer.NPCData != null)
+        {
+            moodSystem.SetNPCData(
+                customer.NPCData
+            );
+        }
+
         if (cameraManager != null)
         {
             cameraManager.FollowNPC(
@@ -99,21 +133,15 @@ public class GameManager : MonoBehaviour
             );
         }
 
-        // NPC begins walking toward
-        // BarServicePoint.
         customer.BeginVisit();
     }
 
-    // Called by NPCController after
-    // reaching ExitPoint.
+    // Continue after NPC leaves
     public void CustomerExited(
         NPCController customer)
     {
         if (customer != null)
-        {
-            customer.gameObject
-                .SetActive(false);
-        }
+            customer.gameObject.SetActive(false);
 
         bool anotherCustomerExists =
             currentCustomerIndex <
@@ -129,53 +157,48 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Show overall feedback
     private void ShowFinalFeedback()
     {
         if (cameraManager != null)
-        {
             cameraManager.StopFollowing();
-        }
 
         if (feedbackManager != null)
-        {
-            feedbackManager
-                .ShowGeneralFeedback();
-        }
+            feedbackManager.ShowGeneralFeedback();
     }
 
-    public void ShowGameOver()
+    // Finish gameplay and show post-questionnaire
+    public void GameplayCompleted()
     {
-        if (gameOverPanel != null)
-        {
-            gameOverPanel.SetActive(true);
-        }
-    }
+        if (researchDataManager != null)
+            researchDataManager.SaveGameplayData();
 
-    // Connect Retry button.
-    public void RetryGame()
-    {
-        SceneManager.LoadScene(
-            SceneManager
-                .GetActiveScene()
-                .buildIndex
+        if (moodSystem != null)
+            moodSystem.HideMood();
+
+        SetPanel(
+            postQuestionnairePanel,
+            true
         );
     }
 
-    // Connect Main Menu button.
-    public void BackToMainMenu()
+    // Finish study and return to menu
+    public void FinishStudyAndReturnToMainMenu()
     {
-        if (string.IsNullOrEmpty(
-            mainMenuSceneName))
-        {
-            Debug.LogError(
-                "Main Menu scene name has not been assigned."
-            );
-
-            return;
-        }
+        if (researchDataManager != null)
+            researchDataManager.SaveGameplayData();
 
         SceneManager.LoadScene(
-            mainMenuSceneName
+            SceneManager.GetActiveScene().buildIndex
         );
+    }
+
+    // Change panel state
+    private void SetPanel(
+        GameObject panel,
+        bool state)
+    {
+        if (panel != null)
+            panel.SetActive(state);
     }
 }

@@ -3,154 +3,302 @@ using TMPro;
 
 public class FeedbackManager : MonoBehaviour
 {
-    [Header("Individual Feedback UI")]
-    [SerializeField]
-    private GameObject feedbackPanel;
+    [Header("Customer Feedback")]
+    [SerializeField] private GameObject feedbackPanel;
+    [SerializeField] private TMP_Text feedbackText;
 
-    [SerializeField]
-    private TMP_Text feedbackText;
+    [Header("Brad Training")]
+    [SerializeField] private GameObject bradTrainingPanel;
+    [SerializeField] private TMP_Text bradTrainingText;
 
-    [Header("General Feedback UI")]
-    [SerializeField]
-    private GameObject generalFeedbackPanel;
-
-    [SerializeField]
-    private TMP_Text generalFeedbackText;
+    [Header("Overall Feedback")]
+    [SerializeField] private GameObject generalFeedbackPanel;
+    [SerializeField] private TMP_Text generalFeedbackText;
 
     [Header("Systems")]
-    [SerializeField]
-    private CameraManager cameraManager;
-
-    [SerializeField]
-    private BartenderInteraction bartenderInteraction;
-
-    [SerializeField]
-    private GameManager gameManager;
+    [SerializeField] private CameraManager cameraManager;
+    [SerializeField] private BartenderInteraction bartenderInteraction;
+    [SerializeField] private GameManager gameManager;
+    [SerializeField] private ResearchDataManager researchDataManager;
 
     private NPCController currentNPC;
 
-    private int completedInteractions;
-    private int totalFinalMood;
-    private int totalListeningScore;
+    private int bradListeningScore;
+    private int bradFinalMood;
+
+    private int customer2ListeningScore;
+    private int customer2FinalMood;
 
     private void Awake()
     {
-        if (feedbackPanel != null)
-        {
-            feedbackPanel.SetActive(false);
-        }
-
-        if (generalFeedbackPanel != null)
-        {
-            generalFeedbackPanel.SetActive(false);
-        }
+        SetPanel(feedbackPanel, false);
+        SetPanel(bradTrainingPanel, false);
+        SetPanel(generalFeedbackPanel, false);
     }
 
+    // Resets feedback data
     public void ResetFeedbackData()
     {
-        completedInteractions = 0;
-        totalFinalMood = 0;
-        totalListeningScore = 0;
+        bradListeningScore = 0;
+        bradFinalMood = 0;
+
+        customer2ListeningScore = 0;
+        customer2FinalMood = 0;
 
         currentNPC = null;
 
-        if (feedbackPanel != null)
-        {
-            feedbackPanel.SetActive(false);
-        }
-
-        if (generalFeedbackPanel != null)
-        {
-            generalFeedbackPanel.SetActive(false);
-        }
+        SetPanel(feedbackPanel, false);
+        SetPanel(bradTrainingPanel, false);
+        SetPanel(generalFeedbackPanel, false);
     }
 
+    // Shows individual customer feedback
     public void ShowFeedback(
         NPCController npc,
         int finalMood,
         int listeningScore)
     {
+        if (npc == null)
+            return;
+
         currentNPC = npc;
 
-        completedInteractions++;
+        int customerIndex =
+            gameManager.CurrentCustomerIndex;
 
-        totalFinalMood += finalMood;
-
-        totalListeningScore +=
-            listeningScore;
-
-        string moodFeedback;
-
-        if (finalMood > 0)
+        if (researchDataManager != null)
         {
-            moodFeedback =
-                "The customer's emotional state improved during the interaction.";
+            researchDataManager.RecordCustomerResult(
+                customerIndex,
+                npc.NPCName,
+                listeningScore,
+                finalMood
+            );
         }
-        else if (finalMood == 0)
+
+        if (customerIndex == 0)
         {
-            moodFeedback =
-                "The customer's emotional state remained relatively stable.";
+            bradListeningScore =
+                listeningScore;
+
+            bradFinalMood =
+                finalMood;
+
+            if (feedbackText != null)
+            {
+                feedbackText.text =
+                    BuildBradFeedback(
+                        listeningScore,
+                        finalMood
+                    );
+            }
         }
         else
         {
-            moodFeedback =
-                "The customer remained emotionally distressed at the end of the interaction.";
+            customer2ListeningScore =
+                listeningScore;
+
+            customer2FinalMood =
+                finalMood;
+
+            if (feedbackText != null)
+            {
+                feedbackText.text =
+                    BuildCustomer2Feedback(
+                        listeningScore,
+                        finalMood
+                    );
+            }
         }
 
+        SetPanel(feedbackPanel, true);
+    }
+
+    // Builds Brad's formative feedback
+    private string BuildBradFeedback(
+        int listeningScore,
+        int finalMood)
+    {
         string listeningFeedback;
 
-        if (listeningScore >= 2)
+        if (listeningScore >= 4)
         {
             listeningFeedback =
-                "You demonstrated strong active listening and acknowledgement.";
+                "Active Listening: Strong\n\n" +
+                "You demonstrated active listening in " +
+                listeningScore +
+                " of 5 opportunities.\n\n" +
+                "You regularly reflected Brad's concerns " +
+                "and encouraged him to explain further.";
         }
-        else if (listeningScore >= 1)
+        else if (listeningScore >= 2)
         {
             listeningFeedback =
-                "You demonstrated some effective active listening behaviours.";
+                "Active Listening: Developing\n\n" +
+                "You demonstrated active listening in " +
+                listeningScore +
+                " of 5 opportunities.\n\n" +
+                "You used active listening at some points, " +
+                "but missed opportunities to reflect " +
+                "what Brad was communicating.";
         }
         else
         {
             listeningFeedback =
-                "There were opportunities to acknowledge and explore the customer's concerns more effectively.";
+                "Active Listening: Limited\n\n" +
+                "You demonstrated active listening in " +
+                listeningScore +
+                " of 5 opportunities.\n\n" +
+                "Try reflecting what the customer is " +
+                "communicating and allowing them to " +
+                "explain further before moving towards " +
+                "a solution.";
         }
 
-        if (feedbackText != null)
+        return listeningFeedback +
+               "\n\n" +
+               BuildMoodFeedback(finalMood);
+    }
+
+    // Builds Customer 2 feedback
+    private string BuildCustomer2Feedback(
+        int listeningScore,
+        int finalMood)
+    {
+        string listeningFeedback;
+
+        if (listeningScore >= 4)
         {
-            feedbackText.text =
-                moodFeedback +
-                "\n\n" +
-                listeningFeedback;
+            listeningFeedback =
+                "Active Listening: Strong\n\n" +
+                "You demonstrated active listening in " +
+                listeningScore +
+                " of 5 opportunities.";
+        }
+        else if (listeningScore >= 2)
+        {
+            listeningFeedback =
+                "Active Listening: Developing\n\n" +
+                "You demonstrated active listening in " +
+                listeningScore +
+                " of 5 opportunities.\n\n" +
+                "Some opportunities to reflect or " +
+                "explore the customer's concerns " +
+                "were missed.";
+        }
+        else
+        {
+            listeningFeedback =
+                "Active Listening: Limited\n\n" +
+                "You demonstrated active listening in " +
+                listeningScore +
+                " of 5 opportunities.";
         }
 
-        if (feedbackPanel != null)
+        return listeningFeedback +
+               "\n\n" +
+               BuildMoodFeedback(finalMood);
+    }
+
+    // Builds mood feedback
+    private string BuildMoodFeedback(
+        int finalMood)
+    {
+        if (finalMood > 0)
         {
-            feedbackPanel.SetActive(true);
+            return
+                "Customer Mood: Improved\n\n" +
+                "The customer's emotional state " +
+                "improved during the interaction.";
+        }
+
+        if (finalMood == 0)
+        {
+            return
+                "Customer Mood: Stable\n\n" +
+                "The customer's emotional state " +
+                "remained relatively stable.";
+        }
+
+        return
+            "Customer Mood: Still Distressed\n\n" +
+            "The customer remained emotionally " +
+            "distressed at the end of the interaction.";
+    }
+
+    // Continues from individual feedback
+    public void ContinueFromCustomerFeedback()
+    {
+        SetPanel(feedbackPanel, false);
+
+        if (gameManager.CurrentCustomerIndex == 0)
+        {
+            ShowBradTraining();
+        }
+        else
+        {
+            SendCurrentCustomerOut();
         }
     }
 
-    // Connect the individual feedback
-    // Continue button to this method.
-    public void ContinueFromCustomerFeedback()
+    // Shows active-listening lesson after Brad
+    private void ShowBradTraining()
     {
-        if (feedbackPanel != null)
+        if (bradTrainingText != null)
         {
-            feedbackPanel.SetActive(false);
+            bradTrainingText.text =
+                "Active Listening Training\n\n" +
+
+                "Before the next customer, remember:\n\n" +
+
+                "Listen to what the customer is actually " +
+                "communicating before deciding how to respond.\n\n" +
+
+                "Reflect or paraphrase their concern when " +
+                "appropriate to show that you understand.\n\n" +
+
+                "Give the customer opportunities to explain " +
+                "or elaborate on what they are experiencing.\n\n" +
+
+                "Avoid rushing to give advice or solve the " +
+                "problem before understanding what the " +
+                "customer needs.\n\n" +
+
+                "Apply these ideas in the next interaction.";
         }
 
+        SetPanel(
+            bradTrainingPanel,
+            true
+        );
+    }
+
+    // Continues after Brad's training lesson
+    public void ContinueAfterBradTraining()
+    {
+        SetPanel(
+            bradTrainingPanel,
+            false
+        );
+
+        SendCurrentCustomerOut();
+    }
+
+    // Sends current NPC out
+    private void SendCurrentCustomerOut()
+    {
         if (currentNPC == null)
             return;
 
-        NPCController npcLeaving =
+        NPCController leavingNPC =
             currentNPC;
 
         currentNPC = null;
 
-        // Return to Camera 1.
         if (cameraManager != null)
         {
             cameraManager.FollowNPC(
-                npcLeaving
+                leavingNPC
             );
         }
 
@@ -160,89 +308,101 @@ public class FeedbackManager : MonoBehaviour
                 .EndNPCInteraction();
         }
 
-        // NPC walks to ExitPoint.
-        npcLeaving.LeaveBar();
+        leavingNPC.LeaveBar();
     }
 
+    // Shows overall feedback
     public void ShowGeneralFeedback()
     {
-        if (generalFeedbackPanel == null)
-            return;
+        string comparison;
 
-        float averageMood = 0f;
-        float averageListening = 0f;
-
-        if (completedInteractions > 0)
+        if (customer2ListeningScore >
+            bradListeningScore)
         {
-            averageMood =
-                (float)totalFinalMood /
-                completedInteractions;
-
-            averageListening =
-                (float)totalListeningScore /
-                completedInteractions;
+            comparison =
+                "You used more active-listening " +
+                "responses in the second interaction.";
         }
-
-        string overallMood;
-
-        if (averageMood > 0f)
+        else if (customer2ListeningScore ==
+                 bradListeningScore)
         {
-            overallMood =
-                "Across both interactions, you generally improved the customers' emotional states.";
-        }
-        else if (averageMood == 0f)
-        {
-            overallMood =
-                "Across both interactions, the customers' emotional states remained relatively stable.";
+            comparison =
+                "Your active-listening score was " +
+                "the same across both interactions.";
         }
         else
         {
-            overallMood =
-                "Across both interactions, the customers remained relatively distressed.";
-        }
-
-        string overallListening;
-
-        if (averageListening >= 2f)
-        {
-            overallListening =
-                "Your overall active-listening performance was strong.";
-        }
-        else if (averageListening >= 1f)
-        {
-            overallListening =
-                "You demonstrated several appropriate active-listening behaviours.";
-        }
-        else
-        {
-            overallListening =
-                "Your interactions showed opportunities for stronger active listening and acknowledgement.";
+            comparison =
+                "You used fewer active-listening " +
+                "responses in the second interaction.";
         }
 
         if (generalFeedbackText != null)
         {
             generalFeedbackText.text =
-                "Overall Interaction Feedback\n\n" +
-                overallMood +
+                "Overall Feedback\n\n" +
+
+                "Brad\n" +
+                "Active Listening: " +
+                bradListeningScore +
+                "/5\n" +
+                "Final Mood: " +
+                MoodName(bradFinalMood) +
                 "\n\n" +
-                overallListening;
+
+                "Customer 2\n" +
+                "Active Listening: " +
+                customer2ListeningScore +
+                "/5\n" +
+                "Final Mood: " +
+                MoodName(customer2FinalMood) +
+                "\n\n" +
+
+                comparison;
         }
 
-        generalFeedbackPanel.SetActive(true);
+        SetPanel(
+            generalFeedbackPanel,
+            true
+        );
     }
 
-    // Connects the General Feedback
-    // Continue button to this method.
+    // Continues to post-questionnaire
     public void CloseGeneralFeedback()
     {
-        if (generalFeedbackPanel != null)
-        {
-            generalFeedbackPanel.SetActive(false);
-        }
+        SetPanel(
+            generalFeedbackPanel,
+            false
+        );
 
         if (gameManager != null)
-        {
-            gameManager.ShowGameOver();
-        }
+            gameManager.GameplayCompleted();
+    }
+
+    // Converts mood number to text
+    private string MoodName(int mood)
+    {
+        if (mood <= -2)
+            return "Very Negative";
+
+        if (mood == -1)
+            return "Negative";
+
+        if (mood == 0)
+            return "Neutral";
+
+        if (mood == 1)
+            return "Improving";
+
+        return "Positive";
+    }
+
+    // Changes panel state
+    private void SetPanel(
+        GameObject panel,
+        bool state)
+    {
+        if (panel != null)
+            panel.SetActive(state);
     }
 }

@@ -226,6 +226,53 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e8fa9dbf9ff2dfe47976ca7b05736413, type: 3}
   m_PrefabInstance: {fileID: 58553566}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &61134921
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 61134922}
+  - component: {fileID: 61134923}
+  m_Layer: 0
+  m_Name: MoodSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &61134922
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 61134921}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2123275726}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &61134923
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 61134921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c83074348ddc4c34eb34dbe0e41f1ac8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MoodSystem
+  moodPanel: {fileID: 386430745}
+  moodText: {fileID: 1675417899}
+  moodIcon: {fileID: 1159044372}
 --- !u!1001 &78270780
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1017,8 +1064,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 682, y: 397}
+  m_SizeDelta: {x: -1577.2096, y: -961.6705}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &386430747
 MonoBehaviour:
@@ -3004,11 +3051,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FeedbackManager
   feedbackPanel: {fileID: 1933634575}
   feedbackText: {fileID: 1576496809}
+  bradTrainingPanel: {fileID: 0}
+  bradTrainingText: {fileID: 0}
   generalFeedbackPanel: {fileID: 0}
   generalFeedbackText: {fileID: 0}
   cameraManager: {fileID: 233343225}
   bartenderInteraction: {fileID: 958502237}
   gameManager: {fileID: 1104558370}
+  researchDataManager: {fileID: 0}
 --- !u!1 &1026435059
 GameObject:
   m_ObjectHideFlags: 0
@@ -3318,8 +3368,13 @@ MonoBehaviour:
   - {fileID: 0}
   cameraManager: {fileID: 233343225}
   feedbackManager: {fileID: 1016634024}
-  gameOverPanel: {fileID: 0}
-  mainMenuSceneName: MainMenu
+  moodSystem: {fileID: 0}
+  researchDataManager: {fileID: 0}
+  mainMenuPanel: {fileID: 0}
+  participantIDPanel: {fileID: 0}
+  preQuestionnairePanel: {fileID: 0}
+  trainingIntroPanel: {fileID: 0}
+  postQuestionnairePanel: {fileID: 0}
 --- !u!1 &1144613390
 GameObject:
   m_ObjectHideFlags: 0
@@ -3495,6 +3550,8 @@ MonoBehaviour:
   drinksSystem: {fileID: 1262265729}
   moodSystem: {fileID: 1190690138}
   feedbackManager: {fileID: 1016634024}
+  gameManager: {fileID: 0}
+  researchDataManager: {fileID: 0}
 --- !u!1 &1159044370
 GameObject:
   m_ObjectHideFlags: 0
@@ -3529,7 +3586,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -142.77527, y: 12.5}
+  m_AnchoredPosition: {x: -117, y: 0}
   m_SizeDelta: {x: 71.5505, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1159044372
@@ -3614,6 +3671,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c83074348ddc4c34eb34dbe0e41f1ac8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MoodSystem
+  moodPanel: {fileID: 0}
   moodText: {fileID: 1675417899}
   moodIcon: {fileID: 1159044372}
 --- !u!1 &1204734244
@@ -3666,7 +3724,6 @@ MonoBehaviour:
   feedbackPanel: {fileID: 1933634575}
   generalFeedbackPanel: {fileID: 0}
   interactionPrompt: {fileID: 813767157}
-  gameOverPanel: {fileID: 0}
 --- !u!1 &1220842402
 GameObject:
   m_ObjectHideFlags: 0
@@ -5164,7 +5221,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 12.5}
+  m_AnchoredPosition: {x: 43, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1675417899
@@ -5222,7 +5279,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 256
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -6737,6 +6794,7 @@ Transform:
   - {fileID: 1190690137}
   - {fileID: 233343224}
   - {fileID: 1204734245}
+  - {fileID: 61134922}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2135290949
