@@ -1,9 +1,8 @@
 using System;
 
 [Serializable]
-public class DialogueChoice
+public class DrinkChoice
 {
-    public string choiceText;
-    public string npcResponse;
-    public int moodEffect;
+    public string actionName;
+    public string choiceID;
 }

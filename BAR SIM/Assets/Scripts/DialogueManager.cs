@@ -13,128 +13,357 @@ public class DialogueManager : MonoBehaviour
     [Header("Choice Buttons")]
     [SerializeField] private Button[] choiceButtons;
 
+    [Header("Systems")]
+    [SerializeField] private DrinksSystem drinksSystem;
+    [SerializeField] private MoodSystem moodSystem;
+    [SerializeField] private FeedbackManager feedbackManager;
+    [SerializeField] private GameManager gameManager;
+    [SerializeField] private ResearchDataManager researchDataManager;
+
     private Story currentStory;
     private NPCController currentNPC;
 
     private void Start()
     {
-        dialoguePanel.SetActive(false);
+        if (dialoguePanel != null)
+            dialoguePanel.SetActive(false);
 
         HideChoices();
     }
 
-    // Called by BartenderInteraction
+    // Starts NPC dialogue
+    // Starts NPC dialogue
     public void StartDialogue(NPCController npc)
     {
+        Debug.Log("StartDialogue was called.");
+
         if (npc == null)
             return;
 
+        NPCData npcData =
+            npc.NPCData;
+
+        if (npcData == null)
+        {
+            Debug.LogError(
+                "NPCData is missing."
+            );
+
+            return;
+        }
+
+        if (npcData.inkDialogue == null)
+        {
+            Debug.LogError(
+                npcData.npcName +
+                " has no Ink JSON assigned."
+            );
+
+            return;
+        }
+
         currentNPC = npc;
 
-        NPCData data = currentNPC.NPCData;
+        currentStory =
+            new Story(
+                npcData.inkDialogue.text
+            );
 
-        if (data == null)
+        if (npcNameText != null)
         {
-            Debug.LogError("NPC has no NPCData assigned.");
-            return;
+            npcNameText.text =
+                npcData.npcName;
         }
 
-        if (data.inkDialogue == null)
+        currentStory.variablesState["mood"] =
+            npcData.startingMood;
+
+        currentStory.variablesState["listeningScore"] =
+            0;
+
+        currentStory.variablesState["drink_choice"] =
+            "";
+
+        if (dialoguePanel != null)
         {
-            Debug.LogError("NPC has no Ink dialogue assigned.");
-            return;
+            dialoguePanel.SetActive(true);
+
+            Debug.Log(
+                "DialoguePanel activeSelf: " +
+                dialoguePanel.activeSelf +
+                " | activeInHierarchy: " +
+                dialoguePanel.activeInHierarchy
+            );
+        }
+        else
+        {
+            Debug.LogError(
+                "Dialogue Panel is not assigned."
+            );
         }
 
-        currentStory = new Story(data.inkDialogue.text);
-
-        npcNameText.text = data.npcName;
-
-        dialoguePanel.SetActive(true);
+        HideChoices();
 
         ContinueStory();
     }
-
+    // Continues Ink story
     private void ContinueStory()
     {
         if (currentStory == null)
             return;
 
-        // NPC still has dialogue
-        if (currentStory.canContinue)
+        while (currentStory.canContinue)
         {
-            string dialogue = currentStory.Continue();
+            string line =
+                currentStory
+                    .Continue()
+                    .Trim();
 
-            dialogueText.text = dialogue.Trim();
+            if (!string.IsNullOrEmpty(line) &&
+                dialogueText != null)
+            {
+                dialogueText.text =
+                    line;
+            }
 
-            DisplayChoices();
+            UpdateMoodFromInk();
 
-            return;
+            if (CheckForDrinkChoice())
+            {
+                HideChoices();
+
+                if (drinksSystem != null)
+                    drinksSystem.ShowDrinkChoices();
+
+                return;
+            }
+
+            if (currentStory.currentChoices.Count > 0)
+            {
+                DisplayChoices();
+                return;
+            }
         }
 
-        // Story has finished
-        if (currentStory.currentChoices.Count == 0)
+        if (!currentStory.canContinue &&
+            currentStory.currentChoices.Count == 0)
         {
-            EndDialogue();
+            FinishConversation();
         }
     }
 
+    // Checks for service choice tag
+    private bool CheckForDrinkChoice()
+    {
+        if (currentStory == null)
+            return false;
+
+        foreach (
+            string tag
+            in currentStory.currentTags)
+        {
+            if (tag.Trim().Equals(
+                "DRINK_CHOICE",
+                System.StringComparison
+                    .OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Displays dialogue choices
     private void DisplayChoices()
     {
         HideChoices();
 
-        var choices = currentStory.currentChoices;
+        if (currentStory == null)
+            return;
 
-        for (int i = 0; i < choices.Count; i++)
+        var choices =
+            currentStory.currentChoices;
+
+        for (int i = 0;
+             i < choices.Count;
+             i++)
         {
             if (i >= choiceButtons.Length)
                 break;
 
-            Button button = choiceButtons[i];
+            Button button =
+                choiceButtons[i];
+
+            if (button == null)
+                continue;
 
             button.gameObject.SetActive(true);
 
             TMP_Text buttonText =
                 button.GetComponentInChildren<TMP_Text>();
 
-            buttonText.text = choices[i].text.Trim();
+            if (buttonText != null)
+            {
+                buttonText.text =
+                    choices[i].text.Trim();
+            }
 
             int choiceIndex = i;
 
             button.onClick.RemoveAllListeners();
 
             button.onClick.AddListener(
-                () => SelectChoice(choiceIndex)
+                () => SelectChoice(
+                    choiceIndex
+                )
             );
         }
     }
 
-    private void SelectChoice(int choiceIndex)
+    // Selects dialogue choice
+    private void SelectChoice(
+        int choiceIndex)
     {
-        currentStory.ChooseChoiceIndex(choiceIndex);
+        if (currentStory == null)
+            return;
+
+        if (choiceIndex < 0 ||
+            choiceIndex >=
+            currentStory.currentChoices.Count)
+        {
+            return;
+        }
+
+        string selectedChoice =
+            currentStory
+                .currentChoices[choiceIndex]
+                .text
+                .Trim();
+
+        if (researchDataManager != null &&
+            gameManager != null)
+        {
+            researchDataManager.RecordDialogueChoice(
+                gameManager.CurrentCustomerIndex,
+                selectedChoice
+            );
+        }
+
+        currentStory.ChooseChoiceIndex(
+            choiceIndex
+        );
 
         HideChoices();
 
         ContinueStory();
     }
 
+    // Receives service choice
+    public void SubmitDrinkChoice(
+        string choiceID)
+    {
+        if (currentStory == null)
+            return;
+
+        if (researchDataManager != null &&
+            gameManager != null)
+        {
+            researchDataManager.RecordDrinkChoice(
+                gameManager.CurrentCustomerIndex,
+                choiceID
+            );
+        }
+
+        currentStory.variablesState["drink_choice"] =
+            choiceID;
+
+        if (drinksSystem != null)
+            drinksSystem.HideDrinkChoices();
+
+        ContinueStory();
+    }
+
+    // Reads mood from Ink
+    private void UpdateMoodFromInk()
+    {
+        if (currentStory == null ||
+            moodSystem == null)
+        {
+            return;
+        }
+
+        object moodValue =
+            currentStory.variablesState["mood"];
+
+        if (moodValue == null)
+            return;
+
+        moodSystem.SetMood(
+            (int)moodValue
+        );
+    }
+
+    // Hides choice buttons
     private void HideChoices()
     {
+        if (choiceButtons == null)
+            return;
+
         foreach (Button button in choiceButtons)
         {
-            button.gameObject.SetActive(false);
+            if (button == null)
+                continue;
 
             button.onClick.RemoveAllListeners();
+            button.gameObject.SetActive(false);
         }
     }
 
-    public void EndDialogue()
+    // Finishes NPC conversation
+    private void FinishConversation()
     {
-        dialoguePanel.SetActive(false);
+        if (currentStory == null)
+            return;
+
+        int finalMood =
+            (int)currentStory
+                .variablesState["mood"];
+
+        int listeningScore =
+            (int)currentStory
+                .variablesState["listeningScore"];
+
+        Debug.Log(
+            "Conversation Finished | NPC: " +
+            currentNPC.NPCName +
+            " | Mood: " +
+            finalMood +
+            " | Listening Score: " +
+            listeningScore
+        );
+
+        if (dialoguePanel != null)
+            dialoguePanel.SetActive(false);
 
         HideChoices();
 
-        currentStory = null;
+        if (drinksSystem != null)
+            drinksSystem.HideDrinkChoices();
 
+        NPCController finishedNPC =
+            currentNPC;
+
+        if (feedbackManager != null)
+        {
+            feedbackManager.ShowFeedback(
+                finishedNPC,
+                finalMood,
+                listeningScore
+            );
+        }
+
+        currentStory = null;
         currentNPC = null;
     }
 }

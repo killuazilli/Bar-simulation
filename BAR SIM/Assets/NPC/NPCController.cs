@@ -11,17 +11,25 @@ public class NPCController : MonoBehaviour
     [SerializeField] private Transform barServicePoint;
     [SerializeField] private Transform exitPoint;
 
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+
     [Header("Interaction")]
     [SerializeField] private BartenderInteraction bartenderInteraction;
 
+    [Header("Game")]
+    [SerializeField] private GameManager gameManager;
+
+    private bool isWalkingToBar;
     private bool hasArrivedAtBar;
     private bool isLeaving;
 
-    // Gives other scripts access to this NPC's data
     public NPCData NPCData => npcData;
 
-    // Gets the NPC name from NPCData
-    public string NPCName => npcData != null ? npcData.npcName : gameObject.name;
+    public string NPCName =>
+        npcData != null
+            ? npcData.npcName
+            : gameObject.name;
 
     private void Awake()
     {
@@ -29,54 +37,109 @@ public class NPCController : MonoBehaviour
         {
             agent = GetComponent<NavMeshAgent>();
         }
-    }
 
-    private void Start()
-    {
-        WalkToBar();
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
     }
 
     private void Update()
     {
-        if (agent == null || agent.pathPending)
+        UpdateAnimation();
+
+        if (agent == null)
             return;
 
-        // Check if NPC has reached the bar
-        if (!hasArrivedAtBar &&
-            agent.hasPath &&
-            agent.remainingDistance <= agent.stoppingDistance)
+        if (!agent.isOnNavMesh)
+            return;
+
+        if (isWalkingToBar &&
+            HasReachedDestination())
         {
             ArriveAtBar();
+            return;
         }
 
-        // Check if NPC has reached the exit
         if (isLeaving &&
-            agent.hasPath &&
-            agent.remainingDistance <= agent.stoppingDistance)
+            HasReachedDestination())
         {
             FinishLeaving();
         }
+    }
+
+    public void BeginVisit()
+    {
+        hasArrivedAtBar = false;
+        isLeaving = false;
+
+        WalkToBar();
     }
 
     private void WalkToBar()
     {
         if (barServicePoint == null)
         {
-            Debug.LogError(NPCName + " has no Bar Service Point assigned.");
+            Debug.LogError(
+                NPCName +
+                " has no BarServicePoint assigned."
+            );
+
             return;
         }
 
+        if (agent == null ||
+            !agent.isOnNavMesh)
+        {
+            Debug.LogError(
+                NPCName +
+                " is not positioned on a NavMesh."
+            );
+
+            return;
+        }
+
+        isWalkingToBar = true;
+        isLeaving = false;
+
         agent.isStopped = false;
-        agent.SetDestination(barServicePoint.position);
+
+        agent.SetDestination(
+            barServicePoint.position
+        );
+    }
+
+    private bool HasReachedDestination()
+    {
+        if (agent.pathPending)
+            return false;
+
+        if (agent.remainingDistance >
+            agent.stoppingDistance)
+        {
+            return false;
+        }
+
+        if (agent.hasPath &&
+            agent.velocity.sqrMagnitude > 0.01f)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void ArriveAtBar()
     {
+        Debug.Log("NPC ARRIVED AT BAR: " + NPCName);
+
+        isWalkingToBar = false;
         hasArrivedAtBar = true;
 
         agent.isStopped = true;
         agent.ResetPath();
 
+        SetWalking(false);
         FaceBartender();
 
         if (bartenderInteraction != null)
@@ -85,7 +148,7 @@ public class NPCController : MonoBehaviour
         }
         else
         {
-            Debug.LogError(NPCName + " has no BartenderInteraction assigned.");
+            Debug.LogError("BartenderInteraction is NOT assigned.");
         }
     }
 
@@ -95,7 +158,8 @@ public class NPCController : MonoBehaviour
             return;
 
         Vector3 direction =
-            bartenderInteraction.transform.position - transform.position;
+            bartenderInteraction.transform.position -
+            transform.position;
 
         direction.y = 0f;
 
@@ -110,14 +174,29 @@ public class NPCController : MonoBehaviour
     {
         if (exitPoint == null)
         {
-            Debug.LogError(NPCName + " has no Exit Point assigned.");
+            Debug.LogError(
+                NPCName +
+                " has no ExitPoint assigned."
+            );
+
             return;
         }
 
+        if (agent == null ||
+            !agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        hasArrivedAtBar = false;
+        isWalkingToBar = false;
         isLeaving = true;
 
         agent.isStopped = false;
-        agent.SetDestination(exitPoint.position);
+
+        agent.SetDestination(
+            exitPoint.position
+        );
     }
 
     private void FinishLeaving()
@@ -126,6 +205,37 @@ public class NPCController : MonoBehaviour
 
         agent.ResetPath();
 
-        gameObject.SetActive(false);
+        SetWalking(false);
+
+        if (gameManager != null)
+        {
+            gameManager.CustomerExited(this);
+        }
+    }
+
+    private void UpdateAnimation()
+    {
+        if (agent == null ||
+            animator == null)
+        {
+            return;
+        }
+
+        bool walking =
+            !agent.isStopped &&
+            agent.velocity.sqrMagnitude > 0.01f;
+
+        SetWalking(walking);
+    }
+
+    private void SetWalking(bool walking)
+    {
+        if (animator != null)
+        {
+            animator.SetBool(
+                "IsWalking",
+                walking
+            );
+        }
     }
 }

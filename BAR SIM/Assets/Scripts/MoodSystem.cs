@@ -4,64 +4,98 @@ using UnityEngine.UI;
 
 public class MoodSystem : MonoBehaviour
 {
-    [Header("Mood")]
-    [SerializeField] private int currentMood = 0;
-
-    [Header("UI")]
+    [Header("Mood UI")]
+    [SerializeField] private GameObject moodPanel;
     [SerializeField] private TMP_Text moodText;
     [SerializeField] private Image moodIcon;
 
-    [Header("Icons")]
-    [SerializeField] private Sprite veryNegativeIcon;
-    [SerializeField] private Sprite negativeIcon;
-    [SerializeField] private Sprite neutralIcon;
-    [SerializeField] private Sprite positiveIcon;
-    [SerializeField] private Sprite veryPositiveIcon;
+    private int currentMood;
+    private NPCData currentNPCData;
 
-    public int CurrentMood => currentMood;
+    public int CurrentMood =>
+        currentMood;
 
+    private void Start()
+    {
+        HideMood();
+    }
+
+    // Set the active NPC
+    public void SetNPCData(NPCData npcData)
+    {
+        if (npcData == null)
+            return;
+
+        currentNPCData =
+            npcData;
+
+        SetMood(
+            currentNPCData.startingMood
+        );
+    }
+
+    // Update mood value
     public void SetMood(int value)
     {
-        currentMood = Mathf.Clamp(value, -2, 2);
+        currentMood =
+            Mathf.Clamp(value, -2, 2);
+
+        ShowMood();
         UpdateMoodUI();
     }
 
-    public void ChangeMood(int amount)
-    {
-        currentMood += amount;
-        currentMood = Mathf.Clamp(currentMood, -2, 2);
-
-        UpdateMoodUI();
-    }
-
+    // Update mood text and icon
     private void UpdateMoodUI()
     {
-        switch (currentMood)
+        if (moodText != null)
         {
-            case -2:
+            if (currentMood <= -2)
                 moodText.text = "Very Negative";
-                moodIcon.sprite = veryNegativeIcon;
-                break;
-
-            case -1:
+            else if (currentMood == -1)
                 moodText.text = "Negative";
-                moodIcon.sprite = negativeIcon;
-                break;
-
-            case 0:
+            else if (currentMood == 0)
                 moodText.text = "Neutral";
-                moodIcon.sprite = neutralIcon;
-                break;
-
-            case 1:
+            else if (currentMood == 1)
+                moodText.text = "Improving";
+            else
                 moodText.text = "Positive";
-                moodIcon.sprite = positiveIcon;
-                break;
-
-            case 2:
-                moodText.text = "Very Positive";
-                moodIcon.sprite = veryPositiveIcon;
-                break;
         }
+
+        if (moodIcon != null &&
+            currentNPCData != null)
+        {
+            if (currentMood < 0)
+            {
+                moodIcon.sprite =
+                    currentNPCData.negativeIcon;
+            }
+            else if (currentMood > 0)
+            {
+                moodIcon.sprite =
+                    currentNPCData.positiveIcon;
+            }
+            else
+            {
+                moodIcon.sprite =
+                    currentNPCData.neutralIcon;
+            }
+
+            moodIcon.enabled =
+                moodIcon.sprite != null;
+        }
+    }
+
+    // Show mood panel
+    public void ShowMood()
+    {
+        if (moodPanel != null)
+            moodPanel.SetActive(true);
+    }
+
+    // Hide mood panel
+    public void HideMood()
+    {
+        if (moodPanel != null)
+            moodPanel.SetActive(false);
     }
 }
