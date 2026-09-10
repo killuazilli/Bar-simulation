@@ -13,19 +13,21 @@ public class GameManager : MonoBehaviour
     [SerializeField] private ResearchDataManager researchDataManager;
 
     [Header("Flow UI")]
-    [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject participantIDPanel;
     [SerializeField] private GameObject preQuestionnairePanel;
     [SerializeField] private GameObject trainingIntroPanel;
     [SerializeField] private GameObject postQuestionnairePanel;
 
+    [Header("Scenes")]
+    [SerializeField] private string mainMenuSceneName = "MainMenu";
+
     private int currentCustomerIndex = -1;
 
-    public int CurrentCustomerIndex =>
-        currentCustomerIndex;
+    public int CurrentCustomerIndex => currentCustomerIndex;
 
     private void Awake()
     {
+        // Hide all customers
         if (customers != null)
         {
             foreach (NPCController customer in customers)
@@ -35,7 +37,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        SetPanel(mainMenuPanel, true);
+        // ComputerIDManager decides when Participant ID appears
         SetPanel(participantIDPanel, false);
         SetPanel(preQuestionnairePanel, false);
         SetPanel(trainingIntroPanel, false);
@@ -56,10 +58,9 @@ public class GameManager : MonoBehaviour
             cameraManager.StopFollowing();
     }
 
-    // Open participant ID entry
-    public void PlayPressed()
+    // Show participant ID screen
+    public void ShowParticipantIDPanel()
     {
-        SetPanel(mainMenuPanel, false);
         SetPanel(participantIDPanel, true);
     }
 
@@ -77,7 +78,7 @@ public class GameManager : MonoBehaviour
         SetPanel(trainingIntroPanel, true);
     }
 
-    // Start Brad's interaction
+    // Start Brad interaction
     public void BeginBradInteraction()
     {
         SetPanel(trainingIntroPanel, false);
@@ -90,7 +91,7 @@ public class GameManager : MonoBehaviour
         StartNextCustomer();
     }
 
-    // Start the next customer
+    // Start next customer
     private void StartNextCustomer()
     {
         currentCustomerIndex++;
@@ -136,7 +137,7 @@ public class GameManager : MonoBehaviour
         customer.BeginVisit();
     }
 
-    // Continue after NPC leaves
+    // Called when a customer leaves
     public void CustomerExited(
         NPCController customer)
     {
@@ -144,6 +145,7 @@ public class GameManager : MonoBehaviour
             customer.gameObject.SetActive(false);
 
         bool anotherCustomerExists =
+            customers != null &&
             currentCustomerIndex <
             customers.Length - 1;
 
@@ -157,7 +159,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Show overall feedback
+    // Show final feedback
     private void ShowFinalFeedback()
     {
         if (cameraManager != null)
@@ -167,7 +169,7 @@ public class GameManager : MonoBehaviour
             feedbackManager.ShowGeneralFeedback();
     }
 
-    // Finish gameplay and show post-questionnaire
+    // Save data and show post questionnaire
     public void GameplayCompleted()
     {
         if (researchDataManager != null)
@@ -182,18 +184,18 @@ public class GameManager : MonoBehaviour
         );
     }
 
-    // Finish study and return to menu
+    // Return to Main Menu
     public void FinishStudyAndReturnToMainMenu()
     {
         if (researchDataManager != null)
             researchDataManager.SaveGameplayData();
 
         SceneManager.LoadScene(
-            SceneManager.GetActiveScene().buildIndex
+            mainMenuSceneName
         );
     }
 
-    // Change panel state
+    // Change panel visibility
     private void SetPanel(
         GameObject panel,
         bool state)

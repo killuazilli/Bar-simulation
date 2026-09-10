@@ -32,8 +32,11 @@ public class DialogueManager : MonoBehaviour
     }
 
     // Starts NPC dialogue
+    // Starts NPC dialogue
     public void StartDialogue(NPCController npc)
     {
+        Debug.Log("StartDialogue was called.");
+
         if (npc == null)
             return;
 
@@ -67,8 +70,10 @@ public class DialogueManager : MonoBehaviour
             );
 
         if (npcNameText != null)
+        {
             npcNameText.text =
                 npcData.npcName;
+        }
 
         currentStory.variablesState["mood"] =
             npcData.startingMood;
@@ -80,13 +85,27 @@ public class DialogueManager : MonoBehaviour
             "";
 
         if (dialoguePanel != null)
+        {
             dialoguePanel.SetActive(true);
+
+            Debug.Log(
+                "DialoguePanel activeSelf: " +
+                dialoguePanel.activeSelf +
+                " | activeInHierarchy: " +
+                dialoguePanel.activeInHierarchy
+            );
+        }
+        else
+        {
+            Debug.LogError(
+                "Dialogue Panel is not assigned."
+            );
+        }
 
         HideChoices();
 
         ContinueStory();
     }
-
     // Continues Ink story
     private void ContinueStory()
     {

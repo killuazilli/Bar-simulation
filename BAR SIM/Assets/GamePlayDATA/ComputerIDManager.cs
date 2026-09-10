@@ -8,7 +8,11 @@ public class ComputerIDManager : MonoBehaviour
     [SerializeField] private TMP_InputField computerIDInput;
     [SerializeField] private TMP_Text currentComputerIDText;
 
-    private const string ComputerIDKey = "ComputerID";
+    [Header("Systems")]
+    [SerializeField] private GameManager gameManager;
+
+    private const string ComputerIDKey =
+        "ComputerID";
 
     public string ComputerID =>
         PlayerPrefs.GetString(
@@ -21,28 +25,51 @@ public class ComputerIDManager : MonoBehaviour
         CheckComputerID();
     }
 
-    // Check if this computer has already been configured
+    // Check if computer already has an ID
     private void CheckComputerID()
     {
         if (string.IsNullOrEmpty(ComputerID))
         {
+            // First time on this computer
             if (setupPanel != null)
                 setupPanel.SetActive(true);
+
+            Debug.Log(
+                "No Computer ID found."
+            );
 
             return;
         }
 
+        // Computer already configured
         if (setupPanel != null)
             setupPanel.SetActive(false);
 
         UpdateDisplay();
+
+        if (gameManager != null)
+        {
+            gameManager
+                .ShowParticipantIDPanel();
+        }
+
+        Debug.Log(
+            "Computer ID found: " +
+            ComputerID
+        );
     }
 
-    // Save this computer's ID
+    // Save computer ID
     public void SaveComputerID()
     {
         if (computerIDInput == null)
+        {
+            Debug.LogError(
+                "Computer ID Input is not assigned."
+            );
+
             return;
+        }
 
         string newID =
             computerIDInput.text
@@ -70,13 +97,19 @@ public class ComputerIDManager : MonoBehaviour
 
         UpdateDisplay();
 
+        if (gameManager != null)
+        {
+            gameManager
+                .ShowParticipantIDPanel();
+        }
+
         Debug.Log(
             "Computer configured as: " +
             newID
         );
     }
 
-    // Update the computer ID display
+    // Update Computer ID display
     private void UpdateDisplay()
     {
         if (currentComputerIDText != null)
@@ -85,5 +118,14 @@ public class ComputerIDManager : MonoBehaviour
                 "Computer: " +
                 ComputerID;
         }
+    }
+
+    // Reset saved computer ID
+    public void ResetComputerID()
+    {
+        PlayerPrefs.DeleteKey("ComputerID");
+        PlayerPrefs.Save();
+
+        Debug.Log("Computer ID reset.");
     }
 }
