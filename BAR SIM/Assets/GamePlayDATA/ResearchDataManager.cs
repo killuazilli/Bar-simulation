@@ -149,7 +149,7 @@ public class ResearchDataManager : MonoBehaviour
 
         string filePath =
             Path.Combine(
-                Application.persistentDataPath,
+                Application.streamingAssetsPath,
                 "BehindTheBarGameplayData.csv"
             );
 
